@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Salima — Portfolio</title>
+
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+
+<!-- External libraries (CDN) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bg-1:#020617;
+    --accent:#00f0ff;
+    --accent-2:#7b00ff;
+    --glass:rgba(255,255,255,0.06);
+    --card:#07182a;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;font-family:"Poppins",sans-serif;background:var(--bg-1);color:#e6f7ff;overflow-x:hidden}
+  /* layers: threejs canvas (#bg3d), particles canvas (#particles), content */
+  canvas#bg3d, canvas#particles { position: fixed; top:0; left:0; width:100%; height:100%; z-index:0; pointer-events:none; }
+  .ui { position:relative; z-index:5; }
+
+  /* Cursor trail dots container (on top) */
+  .cursor-dot { position:fixed; width:14px; height:14px; border-radius:50%; pointer-events:none; transform:translate(-50%,-50%); z-index:9999; mix-blend-mode:screen; box-shadow:0 0 18px rgba(0,255,255,0.25); }
+
+  /* NAV */
+  nav{position:sticky;top:0;display:flex;justify-content:space-between;align-items:center;padding:18px 36px;background:linear-gradient(180deg, rgba(0,0,0,0.2), rgba(0,0,0,0.05));backdrop-filter:blur(6px);border-bottom:1px solid rgba(255,255,255,0.04);z-index:10}
+  nav .brand{font-family:"Orbitron",sans-serif;color:var(--accent);font-size:20px}
+  nav .links a{color:rgba(230,247,255,0.9);text-decoration:none;margin:0 12px;font-weight:600}
+  nav .links a:hover{color:var(--accent)}
+
+  /* Header */
+  header{display:flex;align-items:center;justify-content:space-between;padding:70px 6%;min-height:60vh}
+  .hero-left{max-width:640px}
+  .hero-left h1{font-family:"Orbitron",sans-serif;font-size:48px;margin:0 0 12px;line-height:1;color:var(--accent)}
+  .hero-left .sub{font-size:18px;color:#cfeeff;margin-bottom:18px}
+  .hero-left p{color:#c7e9ff;line-height:1.6;max-width:520px}
+  .cta{margin-top:18px}
+  .cta button{background:linear-gradient(90deg,var(--accent),var(--accent-2));border:none;padding:10px 16px;border-radius:8px;color:#001;background:transparent;font-weight:700;cursor:pointer;box-shadow:0 8px 30px rgba(0,0,0,0.5)}
+
+  /* Neon profile card */
+  .profile{
+    width:360px;padding:18px;border-radius:16px;background:linear-gradient(180deg, rgba(255,255,255,0.02),rgba(255,255,255,0.01));
+    box-shadow: 0 10px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.02);
+    border:1px solid rgba(0,255,255,0.05);
+    text-align:center;backdrop-filter:blur(8px)
+  }
+  .profile img{width:100%;border-radius:12px;box-shadow:0 20px 60px rgba(0,160,255,0.08)}
+  .profile h3{margin:12px 0 2px;color:#fff}
+  .profile p{color:#bfefff;margin:0;font-size:14px}
+
+  /* Sections */
+  section{padding:64px 6%}
+  .section-title{font-family:"Orbitron",sans-serif;color:var(--accent);font-size:30px;margin-bottom:16px}
+
+  /* Projects grid */
+  .controls{margin-bottom:18px}
+  .projects-grid{display:flex;flex-wrap:wrap;gap:20px}
+  .project-card{width:300px;height:200px;perspective:1200px}
+  .project-inner{position:relative;width:100%;height:100%;transition:transform .8s;transform-style:preserve-3d}
+  .project-card:hover .project-inner{transform:rotateY(180deg)}
+  .card-face{position:absolute;inset:0;border-radius:12px;padding:18px;backface-visibility:hidden;display:flex;flex-direction:column;justify-content:space-between}
+  .card-front{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border:1px solid rgba(255,255,255,0.03)}
+  .card-back{background:linear-gradient(180deg, rgba(0,0,0,0.45), rgba(0,0,0,0.35));transform:rotateY(180deg);border:1px solid rgba(0,255,255,0.08);align-items:center;justify-content:center}
+  .card-title{font-weight:700;color:#e6f7ff}
+  .card-desc{color:#bfefff;font-size:13px;line-height:1.4}
+  .card-actions{display:flex;gap:10px;justify-content:flex-end}
+  .btn{padding:8px 12px;border-radius:8px;border:none;cursor:pointer;font-weight:700}
+  .btn-add{background:linear-gradient(90deg,var(--accent),var(--accent-2));color:#001}
+  .btn-edit{background:#12c76a;color:#001}
+  .btn-delete{background:#ff5c7a;color:#fff}
+
+  /* form modal */
+  #overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:none;z-index:60}
+  #modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:360px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:12px;padding:18px;display:none;z-index:70;border:1px solid rgba(0,255,255,0.06)}
+  input,textarea{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:#dff9ff;margin:8px 0;outline:none}
+  textarea{min-height:90px;resize:vertical}
+  .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+
+  /* footer */
+  footer{padding:30px 6%;text-align:center;color:#9ddfff;border-top:1px solid rgba(255,255,255,0.02)}
+
+  /* responsive */
+  @media(max-width:880px){
+    header{flex-direction:column;gap:28px;padding:40px 6%}
+    .profile{width:100%}
+    .projects-grid{justify-content:center}
+  }
+
+  /* small neon lines & animated gradients for cards */
+  .neon-accent { position:relative; }
+  .neon-accent::after{ content:""; position:absolute; left:-6px; top:-6px; right:-6px; bottom:-6px; border-radius:16px; background: linear-gradient(45deg,var(--accent),var(--accent-2)); filter:blur(18px); opacity:0.08; z-index:-1; }
+</style>
+</head>
+<body>
+
+<!-- THREE.js 3D canvas -->
+<canvas id="bg3d"></canvas>
+<!-- Particles canvas -->
+<canvas id="particles"></canvas>
+
+<div class="ui">
+  <!-- cursor dots (JS will create multiple) -->
+  <div id="cursor-root"></div>
+
+  <nav>
+    <div class="brand" style="font-family: 'Great Vibes', cursive; font-size:34px; color:#00f0ff;">
+  Salima
+</div>
+
+    <div class="links">
+      <a href="#home">Home</a>
+      <a href="#about">About</a>
+      <a href="#projects">Projects</a>
+      <a href="#contact">Contact</a>
+    </div>
+  </nav>
+
+  <header id="home" class="neon-accent" style="margin-top:8px">
+    <div class="hero-left">
+      <h1>Hi — I'm <span style="color:var(--accent)">Fathimath Salima K</span></h1>
+      <div class="sub">Web Designer • Frontend Developer • UI/UX Designer</div>
+      <p>Enthusiastic BCA graduate with specialization in Data Analytics and frontend experience at Mahincha.com. I build modern, responsive user interfaces with strong UX focus.</p>
+      <div class="cta" style="display:flex;gap:12px;align-items:center">
+        <a href="Salima_resume.pdf" download><button class="btn" style="background:transparent;border:1px solid rgba(255,255,255,0.08);color:var(--accent)">Download Resume</button></a>
+      </div>
+    </div>
+
+    
+    <div class="profile neon-accent" style="height:360px;">
+  <lottie-player 
+    src="https://assets10.lottiefiles.com/packages/lf20_qp1q7mct.json"  
+    background="transparent"  
+    speed="1"
+    loop 
+    autoplay>
+  </lottie-player>
+</div>
+
+<script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+
+
+
+  </header>
+
+  <section id="about">
+    <div class="section-title">About</div>
+    <p style="max-width:900px;color:#cfefff"> I am a creative and detail-oriented Web Designer & Frontend Developer with a strong
+foundation in both design aesthetics and technical implementation. With a BCA degree
+specialized in Data Analytics, I bring a unique balance of analytical thinking and modern
+frontend development skills.
+
+I enjoy building visually appealing, responsive, and user-centered web experiences
+using HTML, CSS, JavaScript, React, and UI/UX principles. During my experience at
+Mahincha.com, I worked on enhancing website performance, improving user journeys,
+and developing interfaces that feel modern, smooth, and intuitive.
+
+With a learning mindset and a passion for clean, elegant interfaces, I aim to create
+websites that not only look great but solve real problems with smart, simple solutions.
+</p>
+  </section>
+
+  <section id="projects">
+    <div class="section-title">Projects</div>
+    <div class="controls">
+      <button class="btn btn-add" onclick="openModal()">+ New Project</button>
+    </div>
+    <div class="projects-grid" id="projectContainer" aria-live="polite"></div>
+    <div class="controls">
+  
+</div>
+
+  </section>
+
+  <section id="contact">
+  <div class="section-title">Contact</div>
+
+  <div class="contact-wrapper">
+
+    <div class="contact-card">
+      <div class="icon">✉︎</div>
+      <h3>Email</h3>
+      <a href="mailto:fathimathsalima331
+      @gmail.com">
+        fathimathsalima331@gmail.com
+      </a>
+    </div>
+
+    <div class="contact-card">
+      <div class="icon">✆</div>
+      <h3>Phone</h3>
+      <p>+971 52 990 8178</p>
+    </div>
+
+    <div class="contact-card">
+      <div class="icon">⚲</div>
+      <h3>Location</h3>
+      <p>Dubai, UAE</p>
+    </div>
+
+    <div class="contact-card">
+      <div class="icon">[in]</div>
+      <h3>LinkedIn</h3>
+      <a href="https://linkedin.com/in/fathima-salima" target="_blank">
+        linkedin.com/in/fathima-salima
+      </a>
+    </div>
+
+  </div>
+</section>
+
+<style>
+/* CONTACT SECTION STYLING */
+.contact-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 30px;
+  margin-top: 30px;
+}
+
+.contact-card {
+  width: 260px;
+  padding: 26px;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(0,255,255,0.15);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 0 35px rgba(0,255,255,0.10);
+  transition: 0.4s ease;
+}
+
+.contact-card:hover {
+  transform: translateY(-10px) scale(1.03);
+  border-color: #00f0ff;
+  box-shadow: 0 0 30px rgba(0,255,255,0.4);
+}
+
+.contact-card h3 {
+  margin: 10px 0 6px;
+  color: #00eaff;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.contact-card p,
+.contact-card a {
+  color: #dffaff;
+  font-size: 15px;
+  text-decoration: none;
+  transition: 0.3s;
+}
+
+.contact-card a:hover {
+  color: #00eaff;
+}
+
+.icon {
+  font-size: 38px;
+  color: #00f0ff;
+  margin-bottom: 10px;
+  text-shadow: 0 0 15px rgba(0,255,255,0.4);
+}
+
+
+
+/* Responsive */
+@media(max-width: 850px) {
+  .contact-wrapper {
+    justify-content: center;
+  }
+}
+</style>
+
+
+<style>
+.neon-card{
+  width:260px;
+  padding:22px;
+  border-radius:14px;
+  background:rgba(255,255,255,0.04);
+  border:1px solid rgba(0,255,255,0.12);
+  backdrop-filter:blur(10px);
+  transition:0.4s;
+}
+.neon-card:hover{
+  transform:translateY(-6px);
+  border-color:#00f0ff;
+  box-shadow:0 0 20px rgba(0,255,255,0.2);
+}
+.neon-card h3{
+  margin:0 0 8px;
+  color:#00eaff;
+}
+.neon-card a, .neon-card p{
+  margin:0;
+  color:#dff9ff;
+  text-decoration:none;
+}
+</style>
+  <footer>© <span id="year"></span> Design & Bulit By Fathimath Salima</footer> 
+</div>
+
+<!-- Modal -->
+<div id="overlay"></div>
+<div id="modal" role="dialog" aria-modal="true">
+  <h3 id="modalTitle">Add Project</h3>
+  <input id="pTitle" placeholder="Project title" />
+  <input id="pLink" placeholder="Project link (optional)" />
+  <textarea id="pDesc" placeholder="Short description"></textarea>
+  <div class="modal-actions">
+    <button class="btn" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-add" onclick="saveProject()">Save</button>
+  </div>
+</div>
+
+<script>
+/* ========== Basic helpers & state ========== */
+const yearEl = document.getElementById('year'); yearEl.textContent = new Date().getFullYear();
+let projects = JSON.parse(localStorage.getItem('salima_projects') || '[]');
+let editIdx = null;
+
+/* ========== Render Projects (flip cards) ========== */
+function renderProjects(){
+  const container = document.getElementById('projectContainer');
+  container.innerHTML = '';
+  projects.forEach((p,i)=>{
+    const card = document.createElement('div');
+    card.className = 'project-card neon-accent';
+    card.innerHTML = `
+      <div class="project-inner">
+        <div class="card-face card-front">
+          <div>
+            <div class="card-title">${escapeHtml(p.title)}</div>
+            <div class="card-desc">${escapeHtml(p.desc).slice(0,140)}</div>
+          </div>
+          <div class="card-actions">
+            <button class="btn btn-edit" onclick="editProject(${i})">Edit</button>
+            <button class="btn btn-delete" onclick="deleteProject(${i})">Delete</button>
+          </div>
+        </div>
+        <div class="card-face card-back">
+          <div style="text-align:center">
+            <div style="font-weight:700;margin-bottom:8px">${escapeHtml(p.title)}</div>
+            <div style="font-size:13px;color:#cfefff;margin-bottom:10px">${escapeHtml(p.desc)}</div>
+            ${p.link ? `<a href="${escapeAttr(p.link)}" target="_blank" style="color:var(--accent);text-decoration:underline">Open Project</a>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+    container.appendChild(card);
+
+    // simple enter animation using GSAP
+    gsap.from(card, {opacity:0, y:20, duration:0.6, delay: i*0.07, ease:'power2.out'});
+  });
+}
+
+/* escaping helpers */
+function escapeHtml(s){ if(!s) return ''; return s.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
+function escapeAttr(s){ return s ? s.replaceAll('"','%22') : ''; }
+
+/* modal controls */
+const overlay = document.getElementById('overlay'), modal = document.getElementById('modal');
+function openModal(){ overlay.style.display='block'; modal.style.display='block'; document.getElementById('modalTitle').textContent = editIdx===null ? 'Add Project' : 'Edit Project'; if(editIdx!==null){ const p = projects[editIdx]; pTitle.value=p.title; pDesc.value=p.desc; pLink.value=p.link || ''; } else { pTitle.value=''; pDesc.value=''; pLink.value=''; } gsap.fromTo(modal,{scale:0.9,opacity:0},{scale:1,opacity:1,duration:0.35}); }
+function closeModal(){ overlay.style.display='none'; modal.style.display='none'; editIdx=null; }
+
+/* save project */
+function saveProject(){
+  const title = document.getElementById('pTitle').value.trim();
+  const desc = document.getElementById('pDesc').value.trim();
+  const link = document.getElementById('pLink').value.trim();
+  if(!title || !desc) return alert('Please fill title and description.');
+  if(editIdx===null){ projects.unshift({title,desc,link}); } else { projects[editIdx] = {title,desc,link}; }
+  localStorage.setItem('salima_projects', JSON.stringify(projects));
+  closeModal(); renderProjects();
+}
+
+/* edit/delete */
+function editProject(i){ editIdx = i; openModal(); }
+function deleteProject(i){ if(confirm('Delete this project?')){ projects.splice(i,1); localStorage.setItem('salima_projects', JSON.stringify(projects)); renderProjects(); } }
+
+/* close modal clicking overlay */
+overlay.addEventListener('click', closeModal);
+
+/* show initial */
+renderProjects();
+
+/* ========== Animated cursor trail ========== */
+const cursorRoot = document.getElementById('cursor-root');
+const dots = [];
+const DOTS = 6;
+for(let i=0;i<DOTS;i++){
+  const d = document.createElement('div'); d.className='cursor-dot'; d.style.opacity = String(1 - i*0.12); document.body.appendChild(d); dots.push({el:d,x:window.innerWidth/2,y:window.innerHeight/2});
+}
+let mouseX=0, mouseY=0;
+window.addEventListener('mousemove', e=>{ mouseX=e.clientX; mouseY=e.clientY; });
+function animateCursor(){
+  let x = mouseX, y = mouseY;
+  dots.forEach((dot, idx)=>{
+    dot.x += (x - dot.x) * (0.18 + idx*0.02);
+    dot.y += (y - dot.y) * (0.18 + idx*0.02);
+    dot.el.style.left = dot.x + 'px';
+    dot.el.style.top = dot.y + 'px';
+    const size = 14 - idx*1.6;
+    dot.el.style.width = size + 'px';
+    dot.el.style.height = size + 'px';
+    dot.el.style.background = `radial-gradient(circle at 30% 30%, rgba(0,255,255,0.95), rgba(123,0,255,0.65))`;
+  });
+  requestAnimationFrame(animateCursor);
+}
+animateCursor();
+
+/* ========== Particles canvas (floating particles) ========== */
+(function(){
+  const c = document.getElementById('particles');
+  const ctx = c.getContext('2d');
+  let w= c.width = innerWidth, h = c.height = innerHeight;
+  window.addEventListener('resize', ()=>{ w=c.width=innerWidth; h=c.height=innerHeight; init(); });
+  const N = 80;
+  let pts = [];
+  function init(){
+    pts = [];
+    for(let i=0;i<N;i++){
+      pts.push({x:Math.random()*w, y:Math.random()*h, r:Math.random()*1.8+0.3, vx:(Math.random()-0.5)*0.3, vy:(Math.random()-0.5)*0.3});
+    }
+  }
+  function loop(){
+    ctx.clearRect(0,0,w,h);
+    for(let p of pts){
+      p.x += p.vx; p.y += p.vy;
+      if(p.x<0)p.x=w; if(p.x>w)p.x=0; if(p.y<0)p.y=h; if(p.y>h)p.y=0;
+      ctx.beginPath();
+      ctx.fillStyle = 'rgba(0,200,255,0.06)';
+      ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fill();
+    }
+    // draw connecting lines for close particles
+    for(let i=0;i<pts.length;i++){
+      for(let j=i+1;j<pts.length;j++){
+        const a=pts[i], b=pts[j]; const dx=a.x-b.x, dy=a.y-b.y; const d2 = dx*dx+dy*dy;
+        if(d2<12000){
+          ctx.strokeStyle = 'rgba(0,210,255,' + (0.02 + (12000-d2)/15000) + ')';
+          ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(loop);
+  }
+  init(); loop();
+})();
+
+/* ========== Three.js galaxy (background) ========== */
+(function(){
+  const canvas = document.getElementById('bg3d');
+  const renderer = new THREE.WebGLRenderer({canvas:canvas, alpha:true, antialias:true});
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(50, innerWidth/innerHeight, 0.1, 1000);
+  camera.position.z = 80;
+
+  // starfield points
+  const starCount = 2200;
+  const geom = new THREE.BufferGeometry();
+  const positions = new Float32Array(starCount*3);
+  const colors = new Float32Array(starCount*3);
+  for(let i=0;i<starCount;i++){
+    const phi = Math.random()*Math.PI*2;
+    const cost = (Math.random()*2-1);
+    const u = Math.random();
+    const r = 40 + Math.pow(u,2)*120;
+    const idx = i*3;
+    positions[idx]   = Math.cos(phi)*Math.sqrt(1-cost*cost)*r;
+    positions[idx+1] = cost * r * 0.6; // flatten a bit
+    positions[idx+2] = Math.sin(phi)*Math.sqrt(1-cost*cost)*r;
+    const t = Math.random();
+    colors[idx] = 0.0 + t*0.7;
+    colors[idx+1] = 0.6 + t*0.4;
+    colors[idx+2] = 0.8 + t*0.2;
+  }
+  geom.setAttribute('position', new THREE.BufferAttribute(positions,3));
+  geom.setAttribute('color', new THREE.BufferAttribute(colors,3));
+  const mat = new THREE.PointsMaterial({size:0.6, vertexColors:true, transparent:true, opacity:0.95});
+  const stars = new THREE.Points(geom, mat);
+  scene.add(stars);
+
+  // pulsing halo
+  const g2 = new THREE.SphereGeometry(8,32,32);
+  const m2 = new THREE.MeshBasicMaterial({color:0x00d4ff, transparent:true, opacity:0.03});
+  const halo = new THREE.Mesh(g2,m2); scene.add(halo);
+
+  renderer.setPixelRatio(devicePixelRatio);
+  function onResize(){ renderer.setSize(innerWidth, innerHeight); camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); }
+  onResize(); window.addEventListener('resize', onResize);
+
+  let t=0;
+  // subtle camera movement following mouse
+  let mx=0,my=0;
+  window.addEventListener('mousemove', (e)=>{ mx = (e.clientX/window.innerWidth - 0.5)*2; my = (e.clientY/window.innerHeight - 0.5)*2; });
+
+  function animate(){
+    t += 0.003;
+    // rotate star field
+    stars.rotation.y += 0.0008;
+    stars.rotation.x = Math.sin(t*0.3)*0.02;
+    // pulse halo
+    halo.scale.setScalar(1.0 + Math.sin(t*1.5)*0.06);
+    // camera gentle sway
+    camera.position.x += (mx*6 - camera.position.x) * 0.02;
+    camera.position.y += (-my*6 - camera.position.y) * 0.02;
+    camera.lookAt(0,0,0);
+    renderer.render(scene, camera);
+    requestAnimationFrame(animate);
+  }
+  animate();
+})();
+
+/* ========== GSAP page entrance animations ========== */
+gsap.from('header .hero-left h1', {y:20, opacity:0, duration:0.7, ease:'power2.out'});
+gsap.from('.profile', {scale:0.95, opacity:0, duration:0.7, delay:0.15, ease:'back.out(1.2)'});
+gsap.from('section', {y:18, opacity:0, duration:0.9, stagger:0.08, delay:0.15});
+
+/* Accessibility: close modal with ESC */
+/* ========== Particles canvas (floating particles) ========== */
+(function () {
+  const c = document.getElementById('particles');
+  const ctx = c.getContext('2d');
+
+  let w = (c.width = innerWidth),
+      h = (c.height = innerHeight);
+
+  window.addEventListener('resize', () => {
+    w = c.width = innerWidth;
+    h = c.height = innerHeight;
+    init();
+  });
+
+  const N = 80;
+  let pts = [];
+
+  function init() {
+    pts = [];
+    for (let i = 0; i < N; i++) {
+      pts.push({
+        x: Math.random() * w,
+        y: Math.random() * h,
+        r: Math.random() * 1.8 + 0.3,
+        vx: (Math.random() - 0.5) * 0.3,
+        vy: (Math.random() - 0.5) * 0.3
+      });
+    }
+  }
+
+  function loop() {
+    ctx.clearRect(0, 0, w, h);
+
+    for (let p of pts) {
+      p.x += p.vx;
+      p.y += p.vy;
+
+      // wrap around screen
+      if (p.x < 0) p.x = w;
+      if (p.x > w) p.x = 0;
+      if (p.y < 0) p.y = h;
+      if (p.y > h) p.y = 0;
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(0,255,255,0.45)";
+      ctx.fill();
+    }
+
+    requestAnimationFrame(loop);
+  }
+
+  init();
+  loop();
+})();
+
+</script>
+</body>
+</html>
